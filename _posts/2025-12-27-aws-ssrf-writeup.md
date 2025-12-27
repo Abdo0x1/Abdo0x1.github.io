@@ -1,7 +1,7 @@
 ---
 title: AWS SSRF Exploitation
 date: 2025-12-27 12:00:00 +0200
-categories: [Cloud, Security]
+categories: [Cloud]
 tags: [aws, ssrf, ctf]
 ---
 
