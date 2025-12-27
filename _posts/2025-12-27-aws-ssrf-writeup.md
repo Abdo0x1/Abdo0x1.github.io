@@ -1,28 +1,26 @@
 ---
-title: "AWS EC2 Exploitation: Stealing IAM Credentials via SSRF"
+title: "AWS SSRF Credentials Theft"
 date: 2025-12-27 12:00:00 +0200
-categories: [Cloud Security, AWS]
-tags: [ctf, ssrf, aws, ec2, imds, red-teaming]
+categories: [CyberSecurity]
+tags: [aws, ssrf, ctf]
 ---
 
 ## Introduction
 
-Server-Side Request Forgery (SSRF) remains one of the most critical vulnerabilities in cloud environments. In this write-up, I will demonstrate how I exploited an SSRF vulnerability in a web application hosted on AWS EC2 to access the **Instance Metadata Service (IMDS)** and exfiltrate sensitive **IAM Security Credentials**.
+In this challenge, I exploited an SSRF vulnerability on an AWS EC2 instance to steal IAM credentials.
 
-## Challenge Description
+## Step 1: Finding the Vulnerability
 
-* **Target:** A web application hosted on an EC2 instance (`54.166.141.194`).
-* **Objective:** Compromise the server and retrieve the hidden flag (Instance ID) and IAM keys.
-* **Vulnerability:** The application processes user input to fetch data from external URLs without proper validation.
+I found a web app taking a URL input. I tested it with the AWS metadata IP:
+`http://169.254.169.254/latest/meta-data/`
 
-## Phase 1: Reconnaissance
+It worked! The server returned the directory listing.
 
-I started by exploring the web application functionality. I identified a feature that accepts URLs as input. To test for SSRF, I attempted to force the server to make a request to the AWS-specific "Magic IP": `169.254.169.254`.
+## Step 2: Stealing the Keys
 
-### What is 169.254.169.254?
-This is a link-local address used by AWS to expose the **Instance Metadata Service (IMDS)**. It allows EC2 instances to retrieve information about themselves (IP, Region, Instance ID, and IAM Roles).
+To get the sensitive data, I targeted the IAM security credentials endpoint.
+1. First, I got the role name: `ec2-prod-role`
+2. Then, I requested the keys:
 
-I injected the following payload into the vulnerable parameter:
-
-```http
-[http://169.254.169.254/latest/meta-data/](http://169.254.169.254/latest/meta-data/)
+```text
+http://169.254.169.254/latest/meta-data/iam/security-credentials/ec2-prod-role
