@@ -1,6 +1,6 @@
 ---
 title: Stealing AWS IAM Credentials via SSRF
-date: date: 2025-12-27 10:00:00 +0200
+date: 2025-12-27 10:00:00 +0200
 categories: [Cloud, Web]
 tags: [network, ssrf, aws, burpsuite]
 ---
